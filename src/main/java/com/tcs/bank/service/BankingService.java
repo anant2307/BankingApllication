@@ -19,8 +19,8 @@ public class BankingService {
     private final PasswordEncoder encoder;
 
     public BankingService(AccountRepository repo,
-                          TransactionRepository transactionRepo,
-                          PasswordEncoder encoder) {
+            TransactionRepository transactionRepo,
+            PasswordEncoder encoder) {
         this.repo = repo;
         this.transactionRepo = transactionRepo;
         this.encoder = encoder;
@@ -38,13 +38,11 @@ public class BankingService {
         return number;
     }
 
-    /* ================= REGISTER ================= */
-
     public Account register(String username, String email, String password,
-                            double balance, String fullName,
-                            java.time.LocalDate dateOfBirth,
-                            String residentialAddress,
-                            IdType idType, String idNo) {
+            double balance, String fullName,
+            java.time.LocalDate dateOfBirth,
+            String residentialAddress,
+            IdType idType, String idNo) {
 
         if (repo.findByUsername(username) != null)
             throw new IllegalArgumentException("Username already exists");
@@ -64,16 +62,12 @@ public class BankingService {
         return repo.save(acc);
     }
 
-    /* ================= LOGIN ================= */
-
     public Account login(String username, String password) {
         Account acc = repo.findByUsername(username);
         if (acc == null)
             return null;
         return encoder.matches(password, acc.getPasswordHash()) ? acc : null;
     }
-
-    /* ================= ACCOUNT ================= */
 
     public Account getAccountByUsername(String username) {
         Account acc = repo.findByUsername(username);
@@ -82,10 +76,8 @@ public class BankingService {
         return acc;
     }
 
-    /* ================= TRANSACTION HELPER ================= */
-
     private void recordTransaction(Account acc, double amount,
-                                   TransactionType type, String description) {
+            TransactionType type, String description) {
 
         Transaction tx = new Transaction();
         tx.setAccount(acc);
@@ -96,8 +88,6 @@ public class BankingService {
 
         transactionRepo.save(tx);
     }
-
-    /* ================= DEPOSIT ================= */
 
     public void depositByUsername(String username, double amount) {
         if (amount <= 0)
@@ -110,8 +100,6 @@ public class BankingService {
         recordTransaction(acc, amount,
                 TransactionType.DEPOSIT, "Amount deposited");
     }
-
-    /* ================= WITHDRAW ================= */
 
     public void withdrawByUsername(String username, double amount) {
         if (amount <= 0)
@@ -128,11 +116,9 @@ public class BankingService {
                 TransactionType.WITHDRAW, "Amount withdrawn");
     }
 
-    /* ================= TRANSFER ================= */
-
     public void transferByUsername(String sourceUsername,
-                                   Long targetAccountNumber,
-                                   double amount) {
+            Long targetAccountNumber,
+            double amount) {
 
         if (amount <= 0)
             throw new IllegalArgumentException("Invalid amount");
