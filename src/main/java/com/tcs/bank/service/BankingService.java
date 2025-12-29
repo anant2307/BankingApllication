@@ -1,22 +1,28 @@
 package com.tcs.bank.service;
 
-import com.tcs.bank.model.Account;
+import com.tcs.bank.model.*;
 import com.tcs.bank.repository.AccountRepository;
+import com.tcs.bank.repository.TransactionRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @Transactional
 public class BankingService {
 
     private final AccountRepository repo;
+    private final TransactionRepository transactionRepo;
     private final PasswordEncoder encoder;
 
-    public BankingService(AccountRepository repo, PasswordEncoder encoder) {
+    public BankingService(AccountRepository repo,
+                          TransactionRepository transactionRepo,
+                          PasswordEncoder encoder) {
         this.repo = repo;
+        this.transactionRepo = transactionRepo;
         this.encoder = encoder;
     }
 
@@ -32,10 +38,16 @@ public class BankingService {
         return number;
     }
 
-    public Account register(String username, String email, String password, double balance) {
+    /* ================= REGISTER ================= */
+
+    public Account register(String username, String email, String password,
+                            double balance, String fullName,
+                            java.time.LocalDate dateOfBirth,
+                            String residentialAddress,
+                            IdType idType, String idNo) {
 
         if (repo.findByUsername(username) != null)
-            throw new IllegalArgumentException("Username exists");
+            throw new IllegalArgumentException("Username already exists");
 
         Account acc = new Account();
         acc.setAccountNumber(generateAccountNumber());
@@ -43,29 +55,25 @@ public class BankingService {
         acc.setEmail(email);
         acc.setPasswordHash(encoder.encode(password));
         acc.setBalance(balance);
-        acc.setEmailVerified(false);
-        acc.setVerificationToken(UUID.randomUUID().toString());
+        acc.setFullName(fullName);
+        acc.setDateOfBirth(dateOfBirth);
+        acc.setResidentialAddress(residentialAddress);
+        acc.setIdType(idType);
+        acc.setIdNo(idNo);
 
         return repo.save(acc);
     }
 
+    /* ================= LOGIN ================= */
+
     public Account login(String username, String password) {
         Account acc = repo.findByUsername(username);
-        if (acc == null || !acc.isEmailVerified())
+        if (acc == null)
             return null;
         return encoder.matches(password, acc.getPasswordHash()) ? acc : null;
     }
 
-    public void verifyEmail(String token) {
-        Account acc = repo.findByVerificationToken(token);
-        if (acc == null)
-            throw new IllegalArgumentException("Invalid token");
-        acc.setEmailVerified(true);
-        acc.setVerificationToken(null);
-        repo.save(acc);
-        acc.setVerificationToken(null);
-    }
-
+    /* ================= ACCOUNT ================= */
 
     public Account getAccountByUsername(String username) {
         Account acc = repo.findByUsername(username);
@@ -74,6 +82,23 @@ public class BankingService {
         return acc;
     }
 
+    /* ================= TRANSACTION HELPER ================= */
+
+    private void recordTransaction(Account acc, double amount,
+                                   TransactionType type, String description) {
+
+        Transaction tx = new Transaction();
+        tx.setAccount(acc);
+        tx.setAmount(amount);
+        tx.setType(type);
+        tx.setDescription(description);
+        tx.setTimestamp(LocalDateTime.now());
+
+        transactionRepo.save(tx);
+    }
+
+    /* ================= DEPOSIT ================= */
+
     public void depositByUsername(String username, double amount) {
         if (amount <= 0)
             throw new IllegalArgumentException("Invalid amount");
@@ -81,7 +106,12 @@ public class BankingService {
         Account acc = getAccountByUsername(username);
         acc.setBalance(acc.getBalance() + amount);
         repo.save(acc);
+
+        recordTransaction(acc, amount,
+                TransactionType.DEPOSIT, "Amount deposited");
     }
+
+    /* ================= WITHDRAW ================= */
 
     public void withdrawByUsername(String username, double amount) {
         if (amount <= 0)
@@ -93,9 +123,16 @@ public class BankingService {
 
         acc.setBalance(acc.getBalance() - amount);
         repo.save(acc);
+
+        recordTransaction(acc, amount,
+                TransactionType.WITHDRAW, "Amount withdrawn");
     }
 
-    public void transferByUsername(String sourceUsername, Long targetAccountNumber, double amount) {
+    /* ================= TRANSFER ================= */
+
+    public void transferByUsername(String sourceUsername,
+                                   Long targetAccountNumber,
+                                   double amount) {
 
         if (amount <= 0)
             throw new IllegalArgumentException("Invalid amount");
@@ -113,9 +150,21 @@ public class BankingService {
             throw new IllegalArgumentException("Insufficient balance");
 
         source.setBalance(source.getBalance() - amount);
-        target.setBalance(target.getBalance() + amount);
-
         repo.save(source);
+
+        recordTransaction(source, amount,
+                TransactionType.WITHDRAW,
+                "Transfer to account " + targetAccountNumber);
+
+        target.setBalance(target.getBalance() + amount);
         repo.save(target);
+
+        recordTransaction(target, amount,
+                TransactionType.DEPOSIT,
+                "Transfer from account " + source.getAccountNumber());
+    }
+
+    public List<Transaction> getTransactionHistory(Long accountId) {
+        return transactionRepo.findByAccountIdOrderByTimestampDesc(accountId);
     }
 }

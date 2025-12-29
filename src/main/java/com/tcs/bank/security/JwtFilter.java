@@ -46,7 +46,6 @@ public class JwtFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
 
         } catch (Exception ex) {
-            // 🔴 THIS IS THE KEY FIX
             SecurityContextHolder.clearContext();
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired JWT");

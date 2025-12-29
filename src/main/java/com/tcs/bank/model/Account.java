@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Getter
 @Setter
@@ -11,14 +13,12 @@ import lombok.*;
 @AllArgsConstructor
 public class Account {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(unique = true, nullable = false)
     private Long accountNumber;
-
 
     @NotBlank
     @Size(min = 5, max = 20)
@@ -34,9 +34,22 @@ public class Account {
     @Column(unique = true)
     private String email;
 
-    private boolean emailVerified;
-
-    private String verificationToken;
-
     private double balance;
+
+    @NotBlank
+    private String fullName;
+
+    @Past
+    private LocalDate dateOfBirth;
+
+    @NotBlank
+    @Column(length = 500)
+    private String residentialAddress;
+
+    @Enumerated(EnumType.STRING)
+    private IdType idType;
+
+    @NotBlank
+    @Column(unique = true)
+    private String idNo;
 }

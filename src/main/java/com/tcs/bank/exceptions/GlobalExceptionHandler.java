@@ -12,7 +12,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
-        ex.printStackTrace(); // 👈 LOG IT
+        ex.printStackTrace();
         return ResponseEntity.badRequest().body(
                 Map.of("error", ex.getMessage())
         );
@@ -20,7 +20,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
-        ex.printStackTrace(); // 👈 THIS IS CRITICAL
+        ex.printStackTrace(); 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 Map.of(
                     "error", ex.getClass().getName(),
